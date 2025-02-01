@@ -15,10 +15,10 @@ ul {
     left: 50%;
     z-index: 999;
     position: absolute;
-    font-size: 18px;
-    font-weight: bold;
-    color: #000;
-    letter-spacing: 2px;
+    font-size: 16px;
+    font-weight: 400;
+    color: #2e2f42;
+    letter-spacing: 0.04em;
 }
 
 @keyframes fadeLoading {
@@ -194,20 +194,24 @@ p {
     margin-right: 12px;
 }
 
+.load-more-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    margin: 20px 0;
+}
+
 .load-more {
-    display: block;
-    margin: 32px auto;
-    padding: 8px 16px;
+    padding: 12px 24px;
     background-color: #4e75ff;
-    color: #fff;
+    color: white;
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    transition: background-color 250ms cubic-bezier(0.4, 0, 0.2, 1);
-    max-width: 125px;
-    min-height: 40px;
+    transition: background-color 250ms ease;
 }
 
 .load-more:hover {
-    background: #6c8cff;
+    background-color: #6c8cff;
 }

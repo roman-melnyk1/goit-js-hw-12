@@ -1,38 +1,38 @@
-import "simplelightbox/dist/simple-lightbox.min.css";
-import "izitoast/dist/css/iziToast.min.css";
 import SimpleLightbox from "simplelightbox";
+import "simplelightbox/dist/simple-lightbox.min.css";
 import iziToast from "izitoast";
-import { fetchImages } from './js/pixabay-api.js';
-import { createGalleryItem } from './js/render-functions.js';
+import "izitoast/dist/css/iziToast.min.css";
+import { fetchImages } from "./js/pixabay-api.js";
+import { createGalleryItem } from "./js/render-functions.js";
 
-const form = document.querySelector('.search-form');
-const galleryContainer = document.querySelector('.gallery');
-const loadMoreBtn = document.querySelector('.load-more');
-const loader = document.querySelector('.loader-container');
+const form = document.querySelector(".search-form");
+const galleryContainer = document.querySelector(".gallery");
+const loadMoreBtn = document.querySelector(".load-more");
+const loadingMessage = document.querySelector(".loading-message");
 
 let currentPage = 1;
-let currentQuery = '';
+let currentQuery = "";
+let lightbox = new SimpleLightbox(".gallery a", {
+  captionsData: "alt",
+  captionDelay: 250,
+});
 
-form.addEventListener('submit', async (event) => {
+const loader = document.querySelector(".loader-container");
+
+form.addEventListener("submit", async (event) => {
   event.preventDefault();
-  currentQuery = event.currentTarget.elements.query.value.trim();
+  currentQuery = event.target.query.value.trim();
   currentPage = 1;
 
-  galleryContainer.innerHTML = '';
-  loader.style.display = 'block';
-  loadMoreBtn.style.display = 'none';
+  galleryContainer.innerHTML = "";
+  loadMoreBtn.style.display = "none";
+  loader.classList.remove("loader-off"); 
 
   if (!currentQuery) {
-    loader.style.display = 'none';
+    loader.classList.add("loader-off"); 
     iziToast.error({
-      title: '',
-      message: 'Please complete the form',
-      messageColor: '#fafafb',
-      icon: 'fas fa-keyboard',
-      iconColor: '#fafafb',
-      position: 'topRight',
-      backgroundColor: '#ef4040',
-      color: '#fafafb',
+      message: "Please enter a search term.",
+      position: "topRight",
     });
     return;
   }
@@ -40,95 +40,67 @@ form.addEventListener('submit', async (event) => {
   try {
     const data = await fetchImages(currentQuery, currentPage);
 
-    if (data.total === 0) {
-      iziToast.error({
-        title: '',
-        message: 'Sorry, there are no images matching your search query. Please try again!',
-        messageColor: '#fafafb',
-        icon: 'far fa-file-image',
-        iconColor: '#fafafb',
-        position: 'topRight',
-        backgroundColor: '#ef4040',
-        color: '#fafafb',
+    if (data.hits.length === 0) {
+      iziToast.info({
+        message: "Sorry, there are no images matching your search query.",
+        position: "topRight",
       });
       return;
     }
 
     renderGallery(data.hits);
+    lightbox.refresh();
+
     if (data.totalHits > 15) {
-      loadMoreBtn.style.display = 'block';
+      loadMoreBtn.style.display = "block";
     }
-  } catch (err) {
+  } catch (error) {
     iziToast.error({
-      message: 'Something went wrong. Please try again later.',
-      messageColor: '#fafafb',
-      icon: 'fas fa-exclamation-triangle',
-      iconColor: '#fafafb',
-      position: 'topRight',
-      backgroundColor: '#ef4040',
-      color: '#fafafb',
+      message: "Something went wrong. Please try again later.",
+      position: "topRight",
     });
-    console.error(err);
   } finally {
-    loader.style.display = 'none';
-    event.target.reset();
+    loader.classList.add("loader-off"); // Приховуємо індикатор
   }
 });
 
-loadMoreBtn.addEventListener('click', async () => {
-  currentPage += 1;
-  loader.style.display = 'block';
+loadMoreBtn.addEventListener("click", async () => {
+  loadMoreBtn.style.display = "none";
+  loadingMessage.style.display = "block";
 
   try {
+    currentPage += 1;
     const data = await fetchImages(currentQuery, currentPage);
     renderGallery(data.hits);
+    lightbox.refresh();
 
-    if (data.hits.length < 15) {
-      loadMoreBtn.style.display = 'none';
-      iziToast.info({
-        message: "We're sorry, but you've reached the end of search results.",
-        messageColor: '#fafafb',
-        icon: 'fas fa-info-circle',
-        iconColor: '#fafafb',
-        position: 'topRight',
-        backgroundColor: '#4e75ff',
-        color: '#fafafb',
-      });
-    }
-  } catch (err) {
-    iziToast.error({
-      message: 'Something went wrong. Please try again later.',
-      messageColor: '#fafafb',
-      icon: 'fas fa-exclamation-triangle',
-      iconColor: '#fafafb',
-      position: 'topRight',
-      backgroundColor: '#ef4040',
-      color: '#fafafb',
+    const cardHeight = document
+      .querySelector(".gallery-item")
+      .getBoundingClientRect().height;
+    window.scrollBy({
+      top: cardHeight * 2,
+      behavior: "smooth",
     });
-    console.error(err);
+
+    if (currentPage * 15 >= data.totalHits) {
+      iziToast.info({
+        message: "You've reached the end of search results.",
+        position: "topRight",
+      });
+    } else {
+      loadMoreBtn.style.display = "block";
+    }
+  } catch (error) {
+    iziToast.error({
+      message: "Failed to load more images.",
+      position: "topRight",
+    });
   } finally {
-    loader.style.display = 'none';
+    loadingMessage.style.display = "none";
   }
 });
 
 function renderGallery(images) {
-  const galleryTemplate = images.map(el => createGalleryItem(el)).join('');
-  galleryContainer.insertAdjacentHTML('beforeend', galleryTemplate);
-
-  const modal = new SimpleLightbox('.gallery a', {
-    captionsData: 'alt',
-    captions: true,
-    captionDelay: 250,
-  });
-  modal.refresh();
-
-  if (currentPage > 1) {
-    setTimeout(() => {
-      const cardHeight = document.querySelector('.gallery-item').getBoundingClientRect().height;
-      window.scrollBy({
-        top: cardHeight * 2, 
-        behavior: 'smooth'
-      });
-    }, 500); 
-  }
+  const galleryTemplate = images.map((image) => createGalleryItem(image)).join("");
+  galleryContainer.insertAdjacentHTML("beforeend", galleryTemplate);
 }
